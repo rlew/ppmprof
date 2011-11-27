@@ -5,14 +5,15 @@
 #include "uarray.h"
 #include "uarray2.h"
 #include "uarray2b.h"
+#include <stdlib.h>
 
 #define T UArray2b_T
 
 struct T { // represents a 2D array of cells each of size 'size'
-  int width, height;
+  int width, height, xblocks, yblocks;
   unsigned blocksize;
   unsigned size;
-  UArray2_T blocks;
+  void* blocks;
     /* matrix of blocks, each blocksize * blocksize */
     /* matrix dimensions are width and height divided by blocksize,
        rounded up */
@@ -31,44 +32,21 @@ T UArray2b_new(int width, int height, int size, int blocksize) {
   array->height = height;
   array->size   = size;
   array->blocksize = blocksize;
-  array->blocks = UArray2_new((width  + blocksize - 1) / blocksize,
-                             (height + blocksize - 1) / blocksize,
-                             sizeof(UArray_T));
-  int xblocks = UArray2_width (array->blocks); 
-  int yblocks = UArray2_height(array->blocks);
-  for (int i = 0; i < xblocks; i++) {
-    for (int j = 0; j < yblocks; j++) {
-      UArray_T *block = UArray2_at(array->blocks, i, j);
-      *block = UArray_new(blocksize * blocksize, size);
-      
-#line 148 "www/solutions/uarray2b.nw"
-if (0) {
-  fprintf(stderr, "Allocated %p; put %p at %p\n",
-          (void *)*block, (void *)*(UArray_T*)UArray2_at(array->blocks, i, j),
-          UArray2_at(array->blocks, i, j));
-}
-#line 98 "www/solutions/uarray2b.nw"
-    }
-  }
+  int xblocks = (width + blocksize - 1) / blocksize;
+  int yblocks = (height + blocksize - 1) / blocksize;
+  array->blocks = malloc(size * xblocks * blocksize * yblocks * 
+                         blocksize);
   return array;
 }
+
 #line 107 "www/solutions/uarray2b.nw"
 void UArray2b_free(T *array2b) {
-  int i;
   assert(array2b && *array2b);
   T array = *array2b;
-  int xblocks = UArray2_width (array->blocks);
-  int yblocks = UArray2_height(array->blocks);
-  assert(UArray2_size(array->blocks) == sizeof(UArray_T));
-  for (i = 0; i < xblocks; i++) {
-    for (int j = 0; j < yblocks; j++) {
-      UArray_T *p = UArray2_at(array->blocks, i, j);
-      UArray_free(p);
-    }
-  }
-  UArray2_free(&(*array2b)->blocks);
+  free(array->blocks);
   FREE(*array2b);
 }
+
 #line 130 "www/solutions/uarray2b.nw"
 T UArray2b_new_64K_block(int width, int height, int size) {
   int blocksize = (int) floor(sqrt((double) (64 * 1024) / (double) size));
@@ -79,15 +57,19 @@ T UArray2b_new_64K_block(int width, int height, int size) {
     assert(blocksize * blocksize * size <= 64 * 1024); // no bigger
   return UArray2b_new(width, height, size, blocksize);
 }
+
 #line 179 "www/solutions/uarray2b.nw"
 void *UArray2b_at(T array2b, int i, int j) {
   assert(i >= 0 && j >= 0);
-  assert(i < array2b->width && j < array2b->height); // avoid unused cells
+  int w = array2b->width;
+  int h = array2b->height;
+  assert(i < w && j < h); // avoid unused cells
   int b  = array2b->blocksize;
+  int bw = (w + b - 1) / b;
   int bx = i / b;  // block x coordinate
   int by = j / b;  // block y coordinate
-  UArray_T *blockp = UArray2_at(array2b->blocks, bx, by);
-  return UArray_at(*blockp, (i % b) * b + j % b);
+  int loc = (by * bw + bx)*(b*b) + (i % b) * b + j % b;
+  return &((unsigned char*)array2b->blocks)[loc * array2b->size];
 }
 #line 199 "www/solutions/uarray2b.nw"
 void UArray2b_map(T array2b, 
@@ -96,25 +78,26 @@ void UArray2b_map(T array2b,
   int h = array2b->height;
   int w = array2b->width;
   int b = array2b->blocksize;
-  UArray2_T blocks = array2b->blocks;
-  int bw = UArray2_width(blocks);
-  int bh = UArray2_height(blocks);
+  void* blocks = array2b->blocks;
+  int size = array2b->size;
+  int bw = (w + b - 1) / b;
+  int bh = (h + b - 1) / b;
 
   for (int bx = 0; bx < bw; bx++) {
-    for (int by = 0; by < bh; by++) {
-      UArray_T *blockp = UArray2_at(blocks, bx, by);
-      UArray_T block = *blockp;
-      int len = UArray_length(block);
-      int i0 = b * bx; // (i0,j0) correspond to upper left 
-      int j0 = b * by; // corner of block (bx, by)
-      for (int cell = 0; cell < len; cell++) {
-        int i = i0 + cell / b;
-        int j = j0 + cell % b;
-        if (i < w && j < h) // measured overhead 0.5% to 1.5%
-          apply(i, j, array2b, UArray_at(block, cell), cl);
+      for (int by = 0; by < bh; by++) {
+          for(int i0 = 0; i0 < b; i0++) {
+              int bi = bx * b + i0;
+              for(int j0 = 0; j0 < b; j0++) {
+                  int bj = by * b + j0;
+                  if(bi < w && bj < h){  
+                      int loc = (by * bw + bx)*(b*b) + (bi % b) * b + bj % b;
+                      apply(bi, bj, array2b, &((unsigned
+                      char*)blocks)[loc*size], cl);
+                  }
+              }
+           }
       }
-    }
-  }
+   }
 }
 #line 239 "www/solutions/uarray2b.nw"
 int UArray2b_height(T array2b) {
