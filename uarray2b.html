@@ -1,0 +1,271 @@
+<!-- this file was generated automatically by noweave; better not edit it-->
+<!-- -*- mode: Noweb; noweb-code-mode: c-mode -*--->
+<a name="NWD34OnPZ-1">*</a>
+
+<h2><a name="NWD34OnPZ-2">Blocked 2-dimensional arrays</a></h2>
+<p>
+
+
+<p>
+Here's the interface we're to implement.
+<p><pre><a name="NW34OnPZ-1XAfCm-1" href="#NWD34OnPZ-2"><dfn>&lt;uarray2b.h&gt;=</dfn></a>
+#ifndef UARRAY2B_INCLUDED
+#define UARRAY2B_INCLUDED
+
+#define T UArray2b_T
+typedef struct T *T;
+
+extern T    UArray2b_new (int width, int height, int size, int blocksize);
+  /* new blocked 2d array: blocksize = square root of # of cells in block */
+extern T    UArray2b_new_64K_block(int width, int height, int size);
+  /* new blocked 2d array: blocksize as large as possible provided
+     block occupies at most 64KB (if possible) */
+
+extern void  UArray2b_free  (T *array2b);
+
+extern int   UArray2b_width (T array2b);
+extern int   UArray2b_height(T array2b);
+extern int   UArray2b_size  (T array2b);
+extern int   UArray2b_blocksize(T array2b);
+
+extern void *UArray2b_at(T array2b, int i, int j);
+  /* return a pointer to the cell in column i, row j;
+     index out of range is a checked run-time error
+   */
+
+extern void  UArray2b_map(T array2b, 
+    void apply(int i, int j, T array2b, void *elem, void *cl), void *cl);
+      /* visits every cell in one block before moving to another block */
+
+/* it is a checked run-time error to pass a NULL T
+   to any function in this interface */
+
+#undef T
+#endif
+</pre><p>
+<h3><a name="NWD34OnPZ-3">Implementation using the </a><tt>Array2_T</tt> abstraction</h3>
+<p>
+This implementation uses the architecture suggested in the assignment: 
+a 2-dimensional array of blocks, each implemented as an <code>Array_T</code>.
+<p><pre><a name="NW34OnPZ-3ZLMWS-1" href="#NWD34OnPZ-3"><dfn>&lt;uarray2b.c&gt;=</dfn></a>
+#include &lt;math.h&gt;
+#include &quot;assert.h&quot;
+#include &quot;mem.h&quot;
+#include &quot;uarray.h&quot;
+#include &quot;uarray2.h&quot;
+#include &quot;uarray2b.h&quot;
+
+#define T UArray2b_T
+
+struct T { // represents a 2D array of cells each of size 'size'
+  int width, height;
+  unsigned blocksize;
+  unsigned size;
+  UArray2_T blocks;
+    /* matrix of blocks, each blocksize * blocksize */
+    /* matrix dimensions are width and height divided by blocksize,
+       rounded up */
+    /* a block is an Array_T of length blocksize * blocksize and size 'size' */
+    /* invariant relating cells in blocks to cells in the abstraction
+       described in section on coordinate transformations below */
+};
+<a name="NW34OnPZ-3ZLMWS-1-u1" href="#NWD34OnPZ-4"><i>&lt;other definitions&gt;</i></a>
+</pre><p>
+<h4><a name="NWD34OnPZ-4">Memory management and initialization</a></h4>
+Using the <code>Array2</code> and <code>Array</code> abstractions makes allocation of a
+new array very straightforward.
+The one tricky part is that each new <code>Array_T</code> has to be stored in
+local variable&nbsp;<code>a</code> so that its <em>address</em> can be passed to <code>Array2_put</code>.
+<p><pre><a name="NW34OnPZ-yRY2T-1" href="#NWD34OnPZ-4"><dfn>&lt;other definitions&gt;=</dfn></a> <b>(<a href="#NWD34OnPZ-3">&lt;-U</a>)</b> <b>[D<a href="#NWD34OnPZ-5">-&gt;</a>]</b>
+#include &lt;stdio.h&gt;  /* include so we can print diagnostics */
+
+T UArray2b_new(int width, int height, int size, int blocksize) {
+  assert(blocksize &gt; 0);
+  T array;
+  NEW(array);
+  array-&gt;width  = width;
+  array-&gt;height = height;
+  array-&gt;size   = size;
+  array-&gt;blocksize = blocksize;
+  array-&gt;blocks = UArray2_new((width  + blocksize - 1) / blocksize,
+                             (height + blocksize - 1) / blocksize,
+                             sizeof(UArray_T));
+  int xblocks = UArray2_width (array-&gt;blocks); 
+  int yblocks = UArray2_height(array-&gt;blocks);
+  for (int i = 0; i &lt; xblocks; i++) {
+    for (int j = 0; j &lt; yblocks; j++) {
+      UArray_T *block = UArray2_at(array-&gt;blocks, i, j);
+      *block = UArray_new(blocksize * blocksize, size);
+      <a name="NW34OnPZ-yRY2T-1-u1" href="#NWD34OnPZ-7"><i>&lt;possibly print diagnostics about allocated <code>array->blocks</code> at <i>(i, j)</i>&gt;</i></a>
+    }
+  }
+  return array;
+}
+</pre><p>
+<a name="NWD34OnPZ-5">The </a><code>free</code> is the dual of the <code>new</code>.
+Same nested loop, but <code>UArray2_put</code> becomes <code>UArray2_get</code> and
+<code>Array_new</code> becomes <code>Array_free</code>.
+<p><pre><a name="NW34OnPZ-yRY2T-2" href="#NWD34OnPZ-4"><dfn>&lt;other definitions&gt;+=</dfn></a> <b>(<a href="#NWD34OnPZ-3">&lt;-U</a>)</b> <b>[<a href="#NWD34OnPZ-4">&lt;-</a>D<a href="#NWD34OnPZ-6">-&gt;</a>]</b>
+void UArray2b_free(T *array2b) {
+  int i;
+  assert(array2b &amp;&amp; *array2b);
+  T array = *array2b;
+  int xblocks = UArray2_width (array-&gt;blocks);
+  int yblocks = UArray2_height(array-&gt;blocks);
+  assert(UArray2_size(array-&gt;blocks) == sizeof(UArray_T));
+  for (i = 0; i &lt; xblocks; i++) {
+    for (int j = 0; j &lt; yblocks; j++) {
+      UArray_T *p = UArray2_at(array-&gt;blocks, i, j);
+      UArray_free(p);
+    }
+  }
+  UArray2_free(&amp;(*array2b)-&gt;blocks);
+  FREE(*array2b);
+}
+</pre><p>
+<a name="NWD34OnPZ-6">To fit a block within 64KB, </a>
+I&nbsp;have to consider the case where a single cell
+will not fit in 64K.
+The assertions check that <code>blocksize</code> is as big as possible but no bigger.
+After the <code>blocksize</code> is right, I&nbsp;delegate the rest of the work to <code>UArray2b_new</code>. 
+<p><pre><a name="NW34OnPZ-yRY2T-3" href="#NWD34OnPZ-4"><dfn>&lt;other definitions&gt;+=</dfn></a> <b>(<a href="#NWD34OnPZ-3">&lt;-U</a>)</b> <b>[<a href="#NWD34OnPZ-5">&lt;-</a>D<a href="#NWD34OnPZ-8">-&gt;</a>]</b>
+T UArray2b_new_64K_block(int width, int height, int size) {
+  int blocksize = (int) floor(sqrt((double) (64 * 1024) / (double) size));
+  if (blocksize == 0)
+    blocksize = 1;
+  assert((blocksize+1) * (blocksize+1) * size &gt; 64 * 1024); // as big as possible
+  if (size &lt;= 64 * 1024)
+    assert(blocksize * blocksize * size &lt;= 64 * 1024); // no bigger
+  return UArray2b_new(width, height, size, blocksize);
+}
+</pre><p>
+<a name="NWD34OnPZ-7">I used these diagnostics during debugging.</a>
+By turning them off with <code>if (0) { ... }</code>,
+I&nbsp;ensure that no code is generated at run time, but I make it possible
+for the code to be checked by the compiler.
+The casts to <code>void *</code> eliminate compiler warnings,
+and the phrase <code>*(Array_T*)UArray2_get(...)</code> is the Hanson idiom for 
+access to array elements.
+<p><pre><a name="NW34OnPZ-2fxoVg-1" href="#NWD34OnPZ-7"><dfn>&lt;possibly print diagnostics about allocated <code>array->blocks</code> at <i>(i, j)</i>&gt;=</dfn></a> <b>(<a href="#NWD34OnPZ-4">&lt;-U</a>)</b>
+if (0) {
+  fprintf(stderr, &quot;Allocated %p; put %p at %p\n&quot;,
+          (void *)*block, (void *)*(UArray_T*)UArray2_at(array-&gt;blocks, i, j),
+          UArray2_at(array-&gt;blocks, i, j));
+}
+</pre><p>
+
+<h4>The coordinate transformations</h4>
+<p>
+<a name="sec:coordinate"><b>[*]</b></a>
+
+The key invariant is the one that relates the internal ``block coordinates''
+<i>(bx, by)</i> and cell number to the external coordinates <i>(i, j)</i>.
+If&nbsp;<i>b</i>&nbsp;is the block size, we&nbsp;have the relation
+<blockquote><i> (bx, by, c) (b&times;bx + c b, b &times;by + c </i>mod<i>b)</i></blockquote>
+and in the other direction
+<blockquote><i> (i b, j b, (i </i>mod<i>b) &times;b + j </i>mod<i>b)
+(i, j).</i></blockquote>
+These equations are explained in the code below.
+<p>
+
+<h4><a name="NWD34OnPZ-8">Access to a single cell</a></h4>
+<p>
+As always, an <code>UArray2_T</code> stores a <em>pointer</em> to the unknown
+type, which I&nbsp;cast to <code>Array_T *</code> before dereferencing.
+We're given <i>(i, j)</i> and need to compute <i>bx</i>, <i>by</i>, and&nbsp;<i>c</i>.
+Value <code>i % b</code> is the ``inner&nbsp;<i>x</i>'' coordinate within the block,
+and <code>j % b</code> is the ``inner&nbsp;<i>y</i>.''
+To&nbsp;guarantee the blocks live in contiguous locations, I&nbsp;have to put
+them in a single <code>Array_T</code>, so I do some arithmetic to compute the address&nbsp;<i>c</i>.
+<p><pre><a name="NW34OnPZ-yRY2T-4" href="#NWD34OnPZ-4"><dfn>&lt;other definitions&gt;+=</dfn></a> <b>(<a href="#NWD34OnPZ-3">&lt;-U</a>)</b> <b>[<a href="#NWD34OnPZ-6">&lt;-</a>D<a href="#NWD34OnPZ-9">-&gt;</a>]</b>
+void *UArray2b_at(T array2b, int i, int j) {
+  assert(i &gt;= 0 &amp;&amp; j &gt;= 0);
+  assert(i &lt; array2b-&gt;width &amp;&amp; j &lt; array2b-&gt;height); // avoid unused cells
+  int b  = array2b-&gt;blocksize;
+  int bx = i / b;  // block x coordinate
+  int by = j / b;  // block y coordinate
+  UArray_T *blockp = UArray2_at(array2b-&gt;blocks, bx, by);
+  return UArray_at(*blockp, (i % b) * b + j % b);
+}
+</pre><p>
+<h4><a name="NWD34OnPZ-9">Mapping over blocks</a></h4>
+<p>
+Mapping over the blocks requires converting <i>(bx, by, c)</i> and cell number to an original 
+<i>(i, j)</i> coordinate.
+I&nbsp;opted to handle the problem by defining <i>i_0</i> and <i>j_0</i> to be the
+coordinates of the upper left corner of the current block.
+The rest is simple arithmetic, with the only caution being that some
+cells may correspond to <i>(i, j)</i> coordinates that are out of bounds
+and should not be used.
+<p><pre><a name="NW34OnPZ-yRY2T-5" href="#NWD34OnPZ-4"><dfn>&lt;other definitions&gt;+=</dfn></a> <b>(<a href="#NWD34OnPZ-3">&lt;-U</a>)</b> <b>[<a href="#NWD34OnPZ-8">&lt;-</a>D<a href="#NWD34OnPZ-B">-&gt;</a>]</b>
+void UArray2b_map(T array2b, 
+    void apply(int i, int j, T array2b, void *elem, void *cl), void *cl) {
+  assert(array2b);
+  int h = array2b-&gt;height;
+  int w = array2b-&gt;width;
+  int b = array2b-&gt;blocksize;
+  UArray2_T blocks = array2b-&gt;blocks;
+  int bw = UArray2_width(blocks);
+  int bh = UArray2_height(blocks);
+
+  for (int bx = 0; bx &lt; bw; bx++) {
+    for (int by = 0; by &lt; bh; by++) {
+      UArray_T *blockp = UArray2_at(blocks, bx, by);
+      UArray_T block = *blockp;
+      int len = UArray_length(block);
+      int i0 = b * bx; // (i0,j0) correspond to upper left 
+      int j0 = b * by; // corner of block (bx, by)
+      for (int cell = 0; cell &lt; len; cell++) {
+        int i = i0 + cell / b;
+        int j = j0 + cell % b;
+        if (i &lt; w &amp;&amp; j &lt; h) // measured overhead 0.5% to 1.5%
+          apply(i, j, array2b, UArray_at(block, cell), cl);
+      }
+    }
+  }
+}
+</pre><p>It's a bit galling to have to test <code>i &lt; w &amp;&amp; j &lt; h</code> in the inner
+<a name="NWD34OnPZ-A">loop, when I&nbsp;know that except for </a><i>2<b>frac</b>N</i> blocks around the edges,
+the test always succeeds.
+But I&nbsp;did an experiment doing the inner blocks with no test,
+the bottom row with both tests, and the right column (except the
+bottom right block) with the test <code>i &lt; w</code>, and I&nbsp;discovered that the
+overhead of the test is between <i>0.5%</i>&nbsp;and&nbsp;<i>1.5%</i>, with smaller
+overhead for larger benchmarks.
+It's not worth complicating the code to save 100&nbsp;milliseconds on
+a 17-second job.
+<p>
+<h4><a name="NWD34OnPZ-B">Boring definitions</a></h4>
+Read-only exposure of the rep.
+<p><pre><a name="NW34OnPZ-yRY2T-6" href="#NWD34OnPZ-4"><dfn>&lt;other definitions&gt;+=</dfn></a> <b>(<a href="#NWD34OnPZ-3">&lt;-U</a>)</b> <b>[<a href="#NWD34OnPZ-9">&lt;-</a>D<a href="#NWD34OnPZ-C">-&gt;</a>]</b>
+int UArray2b_height(T array2b) {
+  assert(array2b);
+  return array2b-&gt;height;
+}
+int UArray2b_width(T array2b) {
+  assert(array2b);
+  return array2b-&gt;width;
+}
+int UArray2b_size(T array2b) {
+  assert(array2b);
+  return array2b-&gt;size;
+}
+int UArray2b_blocksize(T array2b) {
+  assert(array2b);
+  return array2b-&gt;blocksize;
+}
+</pre><p>
+<a name="NWD34OnPZ-C">This unadvertised definition allows me to use the </a><code>nm</code> program to
+check my libraries, object files, and executable binaries to be sure I&nbsp;know
+which version of the <code>UArray2b</code> is being used.
+<p>
+
+<ul>
+<li><a href="#NWD34OnPZ-4"><i>&lt;other definitions&gt;</i></a>: <a href="#NWD34OnPZ-3">U1</a>, <a href="#NWD34OnPZ-4">D2</a>, <a href="#NWD34OnPZ-5">D3</a>, <a href="#NWD34OnPZ-6">D4</a>, <a href="#NWD34OnPZ-8">D5</a>, <a href="#NWD34OnPZ-9">D6</a>, <a href="#NWD34OnPZ-B">D7</a>, <a href="#NWD34OnPZ-C">D8</a>
+<li><a href="#NWD34OnPZ-7"><i>&lt;possibly print diagnostics about allocated <code>array->blocks</code> at $(i, j)$&gt;</i></a>: <a href="#NWD34OnPZ-4">U1</a>, <a href="#NWD34OnPZ-7">D2</a>
+<li><a href="#NWD34OnPZ-3"><i>&lt;uarray2b.c&gt;</i></a>: <a href="#NWD34OnPZ-3">D1</a>
+<li><a href="#NWD34OnPZ-2"><i>&lt;uarray2b.h&gt;</i></a>: <a href="#NWD34OnPZ-2">D1</a>
+</ul>
+<pre><a name="NW34OnPZ-yRY2T-7" href="#NWD34OnPZ-4"><dfn>&lt;other definitions&gt;+=</dfn></a> <b>(<a href="#NWD34OnPZ-3">&lt;-U</a>)</b> <b>[<a href="#NWD34OnPZ-B">&lt;-</a>D]</b>
+int UArray2b_version_uses_UArray2_T = 1;
+</pre>

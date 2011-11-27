@@ -31,4 +31,3 @@ extern void  UArray2b_map(T array2b,
 
 #undef T
 #endif
-

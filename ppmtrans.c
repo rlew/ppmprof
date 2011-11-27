@@ -134,23 +134,19 @@ int main(int argc, char *argv[]) {
     }
   }
 
-   FILE* fp = NULL;
-   if(argc == 5) {
-       fp = fopen(argv[4], "r");
-       if (!fp) {
-           fprintf(stderr, "Unable to open file.\n");
-           exit(1);
-       }
-   }
-   else {
-       fp = stdin;
-   }
-
-   Pnm_ppm unrotated = Pnm_ppmread(fp, methods);
-
-   if(fp != stdin) {
-       fclose(fp);
-   }
+    Pnm_ppm unrotated;
+    if (i < argc) {
+        FILE* fp = fopen(argv[i], "r");
+        if (fp == NULL) {
+            perror(argv[i]);
+            exit(1);
+        }
+        unrotated = Pnm_ppmread(fp, methods);
+        fclose(fp);
+    } 
+    else {
+        unrotated = Pnm_ppmread(stdin, methods);
+    }   
 
    int rotatedWidth = 0;
    int rotatedHeight = 0;

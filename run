@@ -1,0 +1,21 @@
+
+#!/bin/sh
+. /usr/sup/use/use.sh
+use comp40
+img='tempfile'
+
+#djpeg mobo.jpg > $img
+#/usr/bin/time -f "large rotate 90: %e seconds" \
+#./ppmtrans -block-major -rotate 90 $img > /dev/null
+#/usr/bin/time -f "large rotate 180: %e seconds" \
+#./ppmtrans -block-major -rotate 180 $img > /dev/null
+
+#for i in animals.jpg halligan.jpg from-wind-cave.jpg
+#do
+djpeg from-wind-cave.jpg > $img
+/usr/bin/time -f "rot small 90 deg: %e seconds" \
+./ppmtrans -block-major -rotate 90 $img > /dev/null
+/usr/bin/time -f "rot small 180 deg: %e seconds" \
+./ppmtrans -block-major -rotate 180 $img > /dev/null
+#done
+
