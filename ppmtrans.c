@@ -1,21 +1,86 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-// elide start
-#include <errno.h>
-// elide stop
 
 #include "assert.h"
 #include "a2methods.h"
 #include "a2plain.h"
 #include "a2blocked.h"
 #include "pnm.h"
-// elide start
-#include "arotate.h"
-// elide stop
+#include "mem.h"
+
+typedef A2Methods_UArray2 A2;
+
+/* 
+ * passed to the apply functions to give access to the method and the new
+ * image map where the transformed image will be stored
+ */
+typedef struct Closure {
+    A2 rotatedImage;
+    A2Methods_T methods;
+} Closure;
+
+void rotate90(int col, int row, A2 array2, A2Methods_Object* ptr, 
+    void* cl) {
+    Closure* closure = (Closure*)cl;
+
+    struct Pnm_rgb* rotatedElem = closure->methods->at(
+        closure->rotatedImage, closure->methods->height(array2) - row - 1,
+        col);
+
+    *(struct Pnm_rgb*)rotatedElem = *(struct Pnm_rgb*)ptr;
+}
+
+void rotate180(int col, int row, A2 array2, A2Methods_Object* ptr, 
+    void* cl) {
+    Closure* closure = (Closure*) cl;
+    struct Pnm_rgb* rotatedElem = closure->methods->at(
+        closure->rotatedImage, closure->methods->width(array2) - col - 1,
+        closure->methods->height(array2) - row - 1);
+    *(struct Pnm_rgb*)rotatedElem = *(struct Pnm_rgb*)ptr;
+}
+
+void rotate270(int col, int row, A2 array2, A2Methods_Object* ptr,
+    void* cl) {
+    Closure* closure = (Closure*)cl;
+    struct Pnm_rgb* rotatedElem = closure->methods->at(
+        closure->rotatedImage, row, closure->methods->width(array2) - 
+        col - 1);
+    *(struct Pnm_rgb*)rotatedElem = *(struct Pnm_rgb*)ptr;
+}
+
+void flipHorizontal(int col, int row, A2 array2, A2Methods_Object* ptr,
+    void* cl) {
+    Closure* closure = (Closure*)cl;
+    struct Pnm_rgb* rotatedElem = closure->methods->at(
+        closure->rotatedImage, closure->methods->width(array2) - 
+        col - 1, row);
+    *(struct Pnm_rgb*)rotatedElem = *(struct Pnm_rgb*)ptr;    
+}
+
+void flipVertical(int col, int row, A2 array2, A2Methods_Object* ptr,
+    void* cl) {
+    Closure* closure = (Closure*)cl;
+    struct Pnm_rgb* rotatedElem = closure->methods->at(
+        closure->rotatedImage, col, closure->methods->height(array2) -
+        row - 1);
+    *(struct Pnm_rgb*)rotatedElem = *(struct Pnm_rgb*)ptr;
+}
+
+void transposeImage(int col, int row, A2 array2, A2Methods_Object* ptr,
+    void* cl) {
+    (void) array2;
+    Closure* closure = (Closure*)cl;
+    struct Pnm_rgb* rotatedElem = closure->methods->at(
+        closure->rotatedImage, closure->methods->width(array2) - col -1 ,
+        closure->methods->height(array2)-row -1);
+    *(struct Pnm_rgb*)rotatedElem = *(struct Pnm_rgb*)ptr;
+}
 
 int main(int argc, char *argv[]) {
   int rotation = 0;
+  int flip = 0; // 1 for horizontal, 2 for vertical
+  int transpose = 0;
   A2Methods_T methods = uarray2_methods_plain; // default to UArray2 methods
   assert(methods);
   A2Methods_mapfun *map = methods->map_default; // default to best map
@@ -45,6 +110,18 @@ int main(int argc, char *argv[]) {
       assert(*endptr == '\0'); // parsed all correctly
       assert(rotation == 0   || rotation == 90
           || rotation == 180 || rotation == 270);
+    } else if (!strcmp(argv[i], "-flip")) {
+      assert(i + 1 < argc);
+      if(!strcmp(argv[i+1], "horizontal")) {
+          flip = 1;
+      }
+      else if(!strcmp(argv[i+1], "vertical")) {
+          flip = 2;
+      }
+      i++;
+      assert(flip == 1 || flip == 2);
+    } else if (!strcmp(argv[i], "-transpose")) {
+      transpose = 1;
     } else if (*argv[i] == '-') {
       fprintf(stderr, "%s: unknown option '%s'\n", argv[0], argv[i]);
       exit(1);
@@ -53,42 +130,84 @@ int main(int argc, char *argv[]) {
               "[-{row,col,block}-major] [filename]\n", argv[0]);
       exit(1);
     } else {
-      break;
+    break;
     }
   }
-  // ...
-// elide start
-  Pnm_ppm ppm; // original pixmap as read from the input
-  if (i < argc) {
-    FILE* fp = fopen(argv[i], "r");
-    if (fp == NULL) {
-      perror(argv[i]);
-      exit(1);
-    }
-    ppm = Pnm_ppmread(fp, methods);
-    fclose(fp);
-  } else {
-    ppm = Pnm_ppmread(stdin, methods);
-  }
-  A2Methods_UArray2 orig = ppm->pixels; // image before rotation
-  A2Methods_UArray2 rot  = NULL;        // image after rotation
-  switch(rotation) {
-    case 0:   rot = orig; break;
-    case 90:  rot = rotate_cw (methods, orig, map); break;
-    case 180: rot = rotate_180(methods, orig, map); break;
-    case 270: rot = rotate_ccw(methods, orig, map); break;
-    default:  assert(0); break;
-  }
-  assert(rot);
-  if (rot != orig) { // set ppm to hold the new image
-    assert(orig == ppm->pixels);
-    methods->free(&ppm->pixels);
-    ppm->pixels = rot;
-    ppm->width  = methods->width(rot);
-    ppm->height = methods->height(rot);
-  }
-  Pnm_ppmwrite(stdout, ppm);
-  Pnm_ppmfree(&ppm);
-  return 0;
-// elide stop
+
+   FILE* fp = NULL;
+   if(argc == 5) {
+       fp = fopen(argv[4], "r");
+       if (!fp) {
+           fprintf(stderr, "Unable to open file.\n");
+           exit(1);
+       }
+   }
+   else {
+       fp = stdin;
+   }
+
+   Pnm_ppm unrotated = Pnm_ppmread(fp, methods);
+
+   if(fp != stdin) {
+       fclose(fp);
+   }
+
+   int rotatedWidth = 0;
+   int rotatedHeight = 0;
+   int rotatedDenominator = unrotated->denominator;
+
+   if(rotation == 90 || rotation == 270) {
+        rotatedWidth = unrotated->height;
+        rotatedHeight = unrotated->width;
+   }
+   else if (rotation == 180 || flip > 0 || rotation == 0 || transpose == 1){
+        rotatedWidth = unrotated->width;
+        rotatedHeight = unrotated->height;
+   }
+   
+   /* blank image map with correct dimensions to store transformed image */
+   A2 rotated = unrotated->methods->new(rotatedWidth, rotatedHeight, 
+        sizeof(struct Pnm_rgb));
+   Closure cl;
+   cl.rotatedImage = rotated;
+   cl.methods = methods;
+
+   if(rotation == 90) {
+       map(unrotated->pixels, rotate90, &cl);
+   }
+   else if (rotation == 180) {
+       map(unrotated->pixels, rotate180, &cl);
+   }
+   else if (rotation == 270) {
+       map(unrotated->pixels, rotate270, &cl);
+   }
+   else if (flip == 1) {
+       map(unrotated->pixels, flipHorizontal, &cl);
+   }
+   else if (flip == 2) {
+       map(unrotated->pixels, flipVertical, &cl);
+   }
+   else if (transpose == 1) {
+       map(unrotated->pixels, transposeImage, &cl);
+   }
+   else if (rotation == 0) {
+       Pnm_ppmwrite(stdout, unrotated);
+       Pnm_ppmfree(&unrotated);
+       methods->free(&rotated);
+       return 0;
+   } 
+
+   Pnm_ppmfree(&unrotated);
+
+   Pnm_ppm rotatedImage;
+   NEW(rotatedImage);
+   rotatedImage->width = rotatedWidth;
+   rotatedImage->height = rotatedHeight;
+   rotatedImage->denominator = rotatedDenominator;
+   rotatedImage->pixels = rotated;
+   rotatedImage->methods = methods;
+
+   Pnm_ppmwrite(stdout, rotatedImage);
+
+   Pnm_ppmfree(&rotatedImage);
 }
