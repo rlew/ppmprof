@@ -1,4 +1,3 @@
-#line 49 "www/solutions/uarray2b.nw"
 #include <math.h>
 #include "assert.h"
 #include "mem.h"
@@ -21,7 +20,6 @@ struct T { // represents a 2D array of cells each of size 'size'
     /* invariant relating cells in blocks to cells in the abstraction
        described in section on coordinate transformations below */
 };
-#line 78 "www/solutions/uarray2b.nw"
 #include <stdio.h>  /* include so we can print diagnostics */
 
 T UArray2b_new(int width, int height, int size, int blocksize) {
@@ -39,7 +37,6 @@ T UArray2b_new(int width, int height, int size, int blocksize) {
   return array;
 }
 
-#line 107 "www/solutions/uarray2b.nw"
 void UArray2b_free(T *array2b) {
   assert(array2b && *array2b);
   T array = *array2b;
@@ -47,7 +44,6 @@ void UArray2b_free(T *array2b) {
   FREE(*array2b);
 }
 
-#line 130 "www/solutions/uarray2b.nw"
 T UArray2b_new_64K_block(int width, int height, int size) {
   int blocksize = (int) floor(sqrt((double) (64 * 1024) / (double) size));
   if (blocksize == 0)
@@ -58,7 +54,6 @@ T UArray2b_new_64K_block(int width, int height, int size) {
   return UArray2b_new(width, height, size, blocksize);
 }
 
-#line 179 "www/solutions/uarray2b.nw"
 void *UArray2b_at(T array2b, int i, int j) {
   assert(i >= 0 && j >= 0);
   int w = array2b->width;
@@ -71,7 +66,6 @@ void *UArray2b_at(T array2b, int i, int j) {
   int loc = (by * bw + bx)*(b*b) + (i % b) * b + j % b;
   return &((unsigned char*)array2b->blocks)[loc * array2b->size];
 }
-#line 199 "www/solutions/uarray2b.nw"
 void UArray2b_map(T array2b, 
     void apply(int i, int j, T array2b, void *elem, void *cl), void *cl) {
   assert(array2b);
@@ -99,7 +93,7 @@ void UArray2b_map(T array2b,
       }
    }
 }
-#line 239 "www/solutions/uarray2b.nw"
+
 int UArray2b_height(T array2b) {
   assert(array2b);
   return array2b->height;
@@ -116,5 +110,5 @@ int UArray2b_blocksize(T array2b) {
   assert(array2b);
   return array2b->blocksize;
 }
-#line 260 "www/solutions/uarray2b.nw"
+
 int UArray2b_version_uses_UArray2_T = 1;

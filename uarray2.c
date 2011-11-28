@@ -50,6 +50,7 @@ void* UArray2_at(T twoDArray, int col, int row) {
     assert(twoDArray);
 	assert(row < twoDArray->height && col < twoDArray->width);
 	assert(row >= 0 && col >= 0);
+    printf("row: %d col: %d\n", row, col);
 	int loc = row * UArray2_width(twoDArray) + col;
     return &((unsigned char*)twoDArray->array)[loc*twoDArray->size]; 
 }

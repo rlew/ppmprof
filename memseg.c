@@ -6,7 +6,7 @@
 #include <assert.h>
 
 struct Mem{
-    UM_Word* instructions;
+    //UM_Word* instructions;
     UM_Word** mappedIDs;
     int numMapped;
     int mappedLength;
@@ -14,6 +14,8 @@ struct Mem{
     int unmappedLength;     
     int numRemapped;
 };
+
+static UM_Word* instructions;
 
 /*
  * Creates a new Mem structure and returns it
@@ -24,7 +26,7 @@ Mem* newMem(){
     return mem;
 }
 
-static int adjustForSizeIndex(int offset) {
+static inline int adjustForSizeIndex(int offset) {
     return offset + 1;
 }
 
@@ -33,43 +35,46 @@ static int adjustForSizeIndex(int offset) {
  */
 void loadProgram(Mem* memorySegments, UM_Word ID){
     int length = memorySegments->mappedIDs[ID][0];
-    free(memorySegments->instructions);
-    memorySegments->instructions = malloc(sizeof(UM_Word)*length);
+    free(instructions);
+    instructions = malloc(sizeof(UM_Word)*length);
     for(int i = 0; i < length; i++){
-        memorySegments->instructions[i] = memorySegments->mappedIDs[ID][i];
+        instructions[i] = memorySegments->mappedIDs[ID][i];
     }
 }
 
-void mapInstructions(Mem* memorySegments, int length){
-    length = adjustForSizeIndex(length);
-    memorySegments->instructions = malloc(sizeof(UM_Word)*length);
-    memorySegments->instructions[0] = length;
+/*
+ * Maps the instructions to the appropriate area of memory
+*/
+void mapInstructions(int length){
+    instructions = malloc(sizeof(UM_Word)*adjustForSizeIndex(length));
+    instructions[0] = adjustForSizeIndex(length);
 }
 
-void loadInstruction(Mem* memorySegments, int offset, UM_Word value){
-    offset = adjustForSizeIndex(offset);
-    memorySegments->instructions[offset] = value;
+/*
+ * Loads individual instructions at a given offset
+*/
+void loadInstruction(int offset, UM_Word value){
+    instructions[adjustForSizeIndex(offset)] = value;
 }
 
 /*
  * Returns the value of the word stored at the given ID and offset.
  */
-UM_Word getInstruction(Mem* memorySegments, UM_Word offset){
-    offset = adjustForSizeIndex(offset);
-    return memorySegments->instructions[offset];
+UM_Word getInstruction(int offset){
+    return instructions[adjustForSizeIndex(offset)];
 }
 /*
  * Returns the length of the mapepd segment stored at the ID
  */
-int instructionLength(Mem* memorySegments){
-    return memorySegments->instructions[0] - 1;
+int instructionLength(){
+    return instructions[0] - 1;
 }
 
 /*
  * Increase the available set of IDs (to at least the ID passed in) in 
  * unmappedIDs and sets the corresponding IDs in mappedIDs to NULL. 
  */
-static void resizeMapped(Mem* memorySegments) {
+static inline void resizeMapped(Mem* memorySegments) {
     int length = memorySegments->mappedLength;
     memorySegments->mappedLength = length * 2;
 
@@ -86,7 +91,7 @@ static void resizeMapped(Mem* memorySegments) {
     }
 }
 
-static void resizeUnmapped(Mem* memorySegments) {
+static inline void resizeUnmapped(Mem* memorySegments) {
     int length = memorySegments->unmappedLength;
     memorySegments->unmappedLength = length * 2;
 
@@ -109,12 +114,11 @@ static void resizeUnmapped(Mem* memorySegments) {
  * then or equal to zero.
  */
 void instantiateMem(Mem* mem, int length) {
-    assert(length > 0);
     mem->mappedIDs = malloc(sizeof(UM_Word*)*length);
     mem->numMapped = 0;
     mem->mappedLength = length;
 
-    mem->instructions = NULL;
+    instructions = NULL;
 
     mem->unmappedLength = length/2;
     mem->numRemapped = 0;
@@ -138,13 +142,13 @@ UM_Word mapSegment(Mem* memorySegments, int length) {
         resizeMapped(memorySegments);
     }
 
-    length = adjustForSizeIndex(length);
-    UM_Word* segment = malloc(sizeof(UM_Word)*length);
+    //length = adjustForSizeIndex(length);
+    UM_Word* segment = malloc(sizeof(UM_Word)*adjustForSizeIndex(length));
     
     // Storing the length of each segment as the first index
-    segment[0] = length;
+    segment[0] = adjustForSizeIndex(length);
     // Initializing each UM_Word in the memory segment to 0
-    for(int i = 1; i < length; i++) {
+    for(int i = 1; i < adjustForSizeIndex(length); i++) {
         segment[i] = 0;
     }
 
@@ -185,9 +189,12 @@ void unmapSegment(Mem* memorySegments, UM_Word index) {
  * c.r.t. for the ID to be unmapped.
  */
 UM_Word segmentedLoad(Mem* memorySegments, UM_Word ID, int offset){
-    assert(memorySegments->mappedIDs[ID]);
-    offset = adjustForSizeIndex(offset);
-    return memorySegments->mappedIDs[ID][offset];
+    if(ID == 0){
+        return instructions[adjustForSizeIndex(offset)];
+    }
+    else {
+        return memorySegments->mappedIDs[ID][adjustForSizeIndex(offset)];
+    }
 }
 
 /*
@@ -196,11 +203,12 @@ UM_Word segmentedLoad(Mem* memorySegments, UM_Word ID, int offset){
  */
 void segmentedStore(Mem* memorySegments, UM_Word ID, int offset, UM_Word
                        value){
-    UM_Word* temp = memorySegments->mappedIDs[ID];
-    assert(temp);
-    offset = adjustForSizeIndex(offset);
-    assert((UM_Word)offset < memorySegments->mappedIDs[ID][0]);
-    memorySegments->mappedIDs[ID][offset] = value;
+    if(ID == 0) {
+        instructions[adjustForSizeIndex(offset)] = value;
+    }
+    else {
+        memorySegments->mappedIDs[ID][adjustForSizeIndex(offset)] = value;
+    }
 }
 
 /*
@@ -215,6 +223,6 @@ void freeMem(Mem* memorySegments) {
     }
     free(memorySegments->mappedIDs);
     free(memorySegments->unmappedIDs);
-    free(memorySegments->instructions);
+    free(instructions);
     free(memorySegments);
 }

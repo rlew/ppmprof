@@ -20,7 +20,7 @@ void initializeRegisters(UM_Word* registers, int numRegisters){
  */
 void conditionalMove(UM_Word* registers, UM_Word toSet, UM_Word original,
                      UM_Word value){
-    assert(registers);
+    //assert(registers);
     if(toSet >> RegIDWidth != 0 || original >> RegIDWidth != 0 || 
         value >> RegIDWidth != 0) {
         RAISE(Register_Invalid);
@@ -34,7 +34,7 @@ void conditionalMove(UM_Word* registers, UM_Word toSet, UM_Word original,
  * bits and stores the sum in $r[sum]. Called with command 3.
  */
 void addition(UM_Word* registers, UM_Word sum, UM_Word val1, UM_Word val2) {
-    assert(registers);
+    //assert(registers);
     if(sum >> RegIDWidth != 0 || val1 >> RegIDWidth != 0 || 
         val2 >> RegIDWidth != 0) {
         RAISE(Register_Invalid);
@@ -48,7 +48,7 @@ void addition(UM_Word* registers, UM_Word sum, UM_Word val1, UM_Word val2) {
  */
 void multiplication(UM_Word* registers, UM_Word product, UM_Word val1, 
                     UM_Word val2) {
-    assert(registers);
+    //assert(registers);
     if(product >> RegIDWidth != 0 || val1 >> RegIDWidth != 0 || 
         val2 >> RegIDWidth != 0) {
         RAISE(Register_Invalid);
@@ -63,12 +63,12 @@ void multiplication(UM_Word* registers, UM_Word product, UM_Word val1,
  */
 void division(UM_Word* registers, UM_Word quotient, UM_Word numerator, 
               UM_Word denominator) {
-    assert(registers);
+    //assert(registers);
     if(quotient >> RegIDWidth != 0 || numerator >> RegIDWidth != 0 || 
         denominator >> RegIDWidth != 0) {
         RAISE(Register_Invalid);
     }
-    assert(registers[denominator]);
+    //assert(registers[denominator]);
     registers[quotient] = registers[numerator] / registers[denominator];
 }
 
@@ -78,7 +78,7 @@ void division(UM_Word* registers, UM_Word quotient, UM_Word numerator,
  */
 void bitwiseNAND(UM_Word* registers, UM_Word result, UM_Word val1, 
                  UM_Word val2) {
-    assert(registers);
+    //assert(registers);
     if(result >> RegIDWidth != 0 || val1 >> RegIDWidth != 0 || 
         val2 >> RegIDWidth != 0) {
         RAISE(Register_Invalid);
@@ -91,7 +91,7 @@ void bitwiseNAND(UM_Word* registers, UM_Word result, UM_Word val1,
  * command 11.
  */
 void input(UM_Word* registers, UM_Word reg) {
-    assert(registers);
+    //assert(registers);
     if(reg >> RegIDWidth != 0) {
         RAISE(Register_Invalid);
     }
@@ -112,7 +112,7 @@ void input(UM_Word* registers, UM_Word reg) {
  * Reads the value in $r[reg] to std output. Called with command 10.
  */
 void output(UM_Word* registers, UM_Word reg) {
-    assert(registers);
+    //assert(registers);
     if(reg >> RegIDWidth != 0) {
         RAISE(Register_Invalid);
     }

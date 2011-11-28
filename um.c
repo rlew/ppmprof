@@ -9,6 +9,7 @@
 static UM_Word registers[numRegisters];
 static Mem* memorySegments;
 static int programCounter;
+//static UM_Word* programPointer;
 static int INITIAL_SET_SIZE = 5000; // Number of memory segment IDs
 static int PROGRAM_HINT = 500;     // Number of program instructions
 static int numInstructions;
@@ -75,66 +76,9 @@ static Instruction parseInstruction(UM_Word instructionCode){
 }
 
 /*
- * Creates memeory for the program to run and gets the instruction code along
- * with the registers.
- */
-void build_and_execute_um(FILE* program){
-    memorySegments = newMem();
-    instantiateMem(memorySegments, INITIAL_SET_SIZE);
-    initializeRegisters(registers, numRegisters);
-
-    mapProgram(program);
-    programCounter = 0;
-    numInstructions = instructionLength(memorySegments); 
-
-    while(programCounter < numInstructions){
-        UM_Word instruction = getInstruction(memorySegments, programCounter);
-        Instruction instr = parseInstruction(instruction);
-        execute_instruction(instr);
-        if(instr.op == HALT) break;
-    }
-
-    freeMem(memorySegments);
-}
-
-/*
- * Initializes the program counter and returns the number of instructions.
- */
-void mapProgram(FILE* program) {
-    Seq_T words = Seq_new(PROGRAM_HINT);
-
-    int c = getc(program);
-    while(c != EOF) {
-        UM_Word temp = 0;
-        temp = Bitpack_newu(temp, 8, 24, c);
-        for(int bit = 16; bit >=0; bit -=8){
-            int b = getc(program);
-            temp = Bitpack_newu(temp, 8, bit, b);
-        }
-
-        UM_Word* instr;
-        NEW(instr);
-        *instr = temp;
-        Seq_addhi(words, instr);
-        c = getc(program);
-    }
-
-    mapInstructions(memorySegments, Seq_length(words));
-    int length = instructionLength(memorySegments);
-
-    for(int locToLoad = 0; locToLoad < length; locToLoad++){
-        UM_Word* value = (UM_Word*)Seq_get(words, locToLoad);
-        loadInstruction(memorySegments, locToLoad, *value);
-        FREE(value);
-    }
-
-    Seq_free(&words);
-}
-
-/*
  * Executes the Instruction based on the opcode.
  */
-void execute_instruction(Instruction instr){
+static inline void execute_instruction(Instruction instr){
     switch(instr.op) {
         case MOVE:{
             conditionalMove(registers, instr.reg1, instr.reg2, instr.reg3);
@@ -208,6 +152,7 @@ void execute_instruction(Instruction instr){
             if(ID != 0){
                 loadProgram(memorySegments, ID);
                 numInstructions = instructionLength(memorySegments);
+                //programPointer = getInstructions(memorySegments);
             }
             programCounter = registers[instr.reg3];
             break;
@@ -219,3 +164,62 @@ void execute_instruction(Instruction instr){
         }
     }
 }
+/*
+ * Creates memeory for the program to run and gets the instruction code along
+ * with the registers.
+ */
+void build_and_execute_um(FILE* program){
+    memorySegments = newMem();
+    instantiateMem(memorySegments, INITIAL_SET_SIZE);
+    initializeRegisters(registers, numRegisters);
+
+    mapProgram(program);
+    programCounter = 0;
+    numInstructions = instructionLength(); 
+    //programPointer = getInstructions(memorySegments);
+
+    while(programCounter < numInstructions){
+        UM_Word instruction = getInstruction(programCounter);
+        Instruction instr = parseInstruction(instruction);
+        execute_instruction(instr);
+        if(instr.op == HALT) break;
+    }
+
+    freeMem(memorySegments);
+}
+
+/*
+ * Initializes the program counter and returns the number of instructions.
+ */
+void mapProgram(FILE* program) {
+    Seq_T words = Seq_new(PROGRAM_HINT);
+
+    int c = getc(program);
+    while(c != EOF) {
+        UM_Word temp = 0;
+        temp = Bitpack_newu(temp, 8, 24, c);
+        for(int bit = 16; bit >=0; bit -=8){
+            int b = getc(program);
+            temp = Bitpack_newu(temp, 8, bit, b);
+        }
+
+        UM_Word* instr;
+        NEW(instr);
+        *instr = temp;
+        Seq_addhi(words, instr);
+        c = getc(program);
+    }
+
+    mapSegment(memorySegments, 0);
+    mapInstructions(Seq_length(words));
+    int length = instructionLength();
+
+    for(int locToLoad = 0; locToLoad < length; locToLoad++){
+        UM_Word* value = (UM_Word*)Seq_get(words, locToLoad);
+        loadInstruction(locToLoad, *value);
+        FREE(value);
+    }
+
+    Seq_free(&words);
+}
+

@@ -33,6 +33,6 @@ void mapProgram(FILE* program);
 
 void build_and_execute_um(FILE* program);
 
-void execute_instruction(Instruction);
+//void execute_instruction(Instruction);
 
 #endif

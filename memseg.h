@@ -10,10 +10,10 @@ typedef struct Mem Mem;
 
 Mem* newMem();
 void loadProgram(Mem* memorySegments, UM_Word ID);
-void mapInstructions(Mem* memorySegments,int length);
-void loadInstruction(Mem* memorySegments, int offest, UM_Word value);
-UM_Word getInstruction(Mem* memorySegments, UM_Word offset);
-int instructionLength(Mem* memorySegments);
+void mapInstructions(int length);
+void loadInstruction(int offest, UM_Word value);
+UM_Word getInstruction(int offset);//, UM_Word offset);
+int instructionLength();
 void instantiateMem(Mem* memorySegments, int length);
 UM_Word mapSegment(Mem* memorySegments, int length);
 void unmapSegment(Mem* memorySegments, UM_Word index);
