@@ -40,17 +40,17 @@ T UArray2_new(int width, int height, int size) {
     return twoDArray;
 }
 
-void UArray2_free(T* twoDArray) {
-    assert(*twoDArray);
-	free((*twoDArray)->array);
-    free(*twoDArray);
+void UArray2_free(T twoDArray) {
+    assert(twoDArray->array);
+	free(twoDArray->array);
+    free(twoDArray);
 }
 
 void* UArray2_at(T twoDArray, int col, int row) {
     assert(twoDArray);
 	assert(row < twoDArray->height && col < twoDArray->width);
 	assert(row >= 0 && col >= 0);
-    printf("row: %d col: %d\n", row, col);
+    //printf("row: %d col: %d\n", row, col);
 	int loc = row * UArray2_width(twoDArray) + col;
     return &((unsigned char*)twoDArray->array)[loc*twoDArray->size]; 
 }
@@ -60,7 +60,7 @@ void UArray2_map_row_major(T twoDArray, void apply(int col, int row, void* elem,
 	assert(twoDArray);
     for(int r=0; r < UArray2_height(twoDArray); r++) {
         for(int c=0; c < UArray2_width(twoDArray); c++) {
-            apply(r, c, UArray2_at(twoDArray, c, r), cl);
+            apply(c, r, UArray2_at(twoDArray, c, r), cl);
         }
     }
 }
@@ -70,9 +70,10 @@ void UArray2_map_col_major(T twoDArray, void apply(int col, int row, void* elem,
 	assert(twoDArray);
     for(int c=0; c < UArray2_width(twoDArray); c++){
         for(int r=0; r < UArray2_height(twoDArray); r++){
-            apply(r, c, UArray2_at(twoDArray, c, r), cl);
+            apply(c, r, UArray2_at(twoDArray, c, r), cl);
         }
     }
 }
 
 #undef T
+

@@ -17,17 +17,21 @@ typedef A2Methods_UArray2 A2;
  */
 typedef struct Closure {
     A2 rotatedImage;
-    A2Methods_T methods;
-    int height, width;
+    //A2Methods_T methods;
+    //int height, width;
 } Closure;
+
+static int height;
+static int width;
+static A2Methods_T methods;
 
 void rotate90(int col, int row, A2 array2, A2Methods_Object* ptr, 
     void* cl) {
     (void) array2;
     Closure* closure = (Closure*)cl;
 
-    struct Pnm_rgb* rotatedElem = closure->methods->at(
-        closure->rotatedImage, closure->height - row - 1,
+    struct Pnm_rgb* rotatedElem = methods->at(
+        closure->rotatedImage, height - row - 1,
         col);
 
     *(struct Pnm_rgb*)rotatedElem = *(struct Pnm_rgb*)ptr;
@@ -37,9 +41,9 @@ void rotate180(int col, int row, A2 array2, A2Methods_Object* ptr,
     void* cl) {
     (void) array2;
     Closure* closure = (Closure*) cl;
-    struct Pnm_rgb* rotatedElem = closure->methods->at(
-        closure->rotatedImage, closure->width - col - 1,
-        closure->height - row - 1);
+    struct Pnm_rgb* rotatedElem = methods->at(
+        closure->rotatedImage, width - col - 1,
+        height - row - 1);
     *(struct Pnm_rgb*)rotatedElem = *(struct Pnm_rgb*)ptr;
 }
 
@@ -47,8 +51,8 @@ void rotate270(int col, int row, A2 array2, A2Methods_Object* ptr,
     void* cl) {
     (void) array2;
     Closure* closure = (Closure*)cl;
-    struct Pnm_rgb* rotatedElem = closure->methods->at(
-        closure->rotatedImage, row, closure->width - 
+    struct Pnm_rgb* rotatedElem = methods->at(
+        closure->rotatedImage, row, width - 
         col - 1);
     *(struct Pnm_rgb*)rotatedElem = *(struct Pnm_rgb*)ptr;
 }
@@ -57,8 +61,8 @@ void flipHorizontal(int col, int row, A2 array2, A2Methods_Object* ptr,
     void* cl) {
     (void) array2;
     Closure* closure = (Closure*)cl;
-    struct Pnm_rgb* rotatedElem = closure->methods->at(
-        closure->rotatedImage, closure->width - 
+    struct Pnm_rgb* rotatedElem = methods->at(
+        closure->rotatedImage, width - 
         col - 1, row);
     *(struct Pnm_rgb*)rotatedElem = *(struct Pnm_rgb*)ptr;    
 }
@@ -67,8 +71,8 @@ void flipVertical(int col, int row, A2 array2, A2Methods_Object* ptr,
     void* cl) {
     (void) array2;
     Closure* closure = (Closure*)cl;
-    struct Pnm_rgb* rotatedElem = closure->methods->at(
-        closure->rotatedImage, col, closure->height -
+    struct Pnm_rgb* rotatedElem = methods->at(
+        closure->rotatedImage, col, height -
         row - 1);
     *(struct Pnm_rgb*)rotatedElem = *(struct Pnm_rgb*)ptr;
 }
@@ -77,9 +81,9 @@ void transposeImage(int col, int row, A2 array2, A2Methods_Object* ptr,
     void* cl) {
     (void) array2;
     Closure* closure = (Closure*)cl;
-    struct Pnm_rgb* rotatedElem = closure->methods->at(
-        closure->rotatedImage, closure->width - col -1 ,
-        closure->height - row -1);
+    struct Pnm_rgb* rotatedElem = methods->at(
+        closure->rotatedImage, width - col -1 ,
+        height - row -1);
     *(struct Pnm_rgb*)rotatedElem = *(struct Pnm_rgb*)ptr;
 }
 
@@ -87,7 +91,7 @@ int main(int argc, char *argv[]) {
   int rotation = 0;
   int flip = 0; // 1 for horizontal, 2 for vertical
   int transpose = 0;
-  A2Methods_T methods = uarray2_methods_plain; // default to UArray2 methods
+  methods = uarray2_methods_plain; // default to UArray2 methods
   assert(methods);
   A2Methods_mapfun *map = methods->map_default; // default to best map
   assert(map);
@@ -172,9 +176,9 @@ int main(int argc, char *argv[]) {
         sizeof(struct Pnm_rgb));
    Closure cl;
    cl.rotatedImage = rotated;
-   cl.methods = methods;
-   cl.height = unrotated->height;
-   cl.width = unrotated->width;
+   methods = methods;
+   height = unrotated->height;
+   width = unrotated->width;
 
    if(rotation == 90) {
        map(unrotated->pixels, rotate90, &cl);

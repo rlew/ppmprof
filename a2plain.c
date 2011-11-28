@@ -6,13 +6,13 @@
 typedef A2Methods_UArray2 A2; // private abbreviation
 
 static A2 new(int width, int height, int size) {
-  return UArray2_new(height, width, size);
+  return UArray2_new(width, height, size);
 }
 
 static A2Methods_UArray2 new_with_blocksize(int width, int height,
     int size, int blocksize) {
     (void) blocksize;
-    return UArray2_new(height, width, size);
+    return UArray2_new(width, height, size);
 }
 
 static void a2free(A2 *array2p) {
@@ -26,7 +26,7 @@ static int size      (A2 array2)  { return UArray2_size(array2); }
 static int blocksize (A2 array2)  { (void) array2; return 0; }
 
 static A2Methods_Object* at(A2 array2, int i, int j) {
-    return UArray2_at(array2, j, i);
+    return UArray2_at(array2, i, j);
 }
 
 typedef void applyfun(int col, int row, void* elem, void* cl);
@@ -40,7 +40,7 @@ struct a2fun_closure {
 static void apply_a2fun(int col, int row, void* elem, void* vcl)
 {
     struct a2fun_closure *fcl = vcl;
-    fcl->apply(row, col, fcl->array2, elem, fcl->cl);
+    fcl->apply(col, row, fcl->array2, elem, fcl->cl);
 }
 
 static void map_row_major(A2 array2, A2Methods_applyfun apply, void* cl) {

@@ -1,0 +1,34 @@
+PROFILING ASSIGNMENT
+
+Rachel Lew
+
+COLLABORATION:
+    - Josh Pearl: discussing nature of profiling, kcachegrind usage, and
+      potential abstraction alteration strategies specifically in reference to
+      storing the length of segments as the initial element and true cost of
+      the execute_instruction function.
+
+PPMTRANS ASSEMBLY ANALYSIS:
+    
+
+UM ASSEMBLY ANALYSIS:
+    Most of the UM execution is spent in build_and_execute_um where the
+    instructions are fetched from memory and executed according to their 
+    corresponding opcode. Given that the main operation of the UM is being 
+    executed here, it makes sense that the majority of the time is spent in 
+    this function, and given the nature of these operations namely a large 
+    number of function calls the large amount of time this takes seems sound.
+
+    After investigation of the assemby code for this function, it would appear
+    that the assembly cannot be changed to further optimize the program.  The
+    majority of operations are done in registers with a large proportion of
+    them moving local variables into registers appropriate for calling the
+    various functions to execute UM instructions. There is one loop within the
+    function which retrieves each instruction and executes it, and no
+    computations could be removed from this loop to expedite the code.
+
+HOURS:
+    PROBLEM ANALYSIS:
+    PROBLEM SOLVING:
+
+
