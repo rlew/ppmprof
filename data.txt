@@ -1,0 +1,10 @@
+removing unused variables and single use variables
+~/Comp40/profiling/ppmtrans > /usr/bin/time ./ppmtrans -block-major -rotate 90 mobo > /dev/null
+4.74user 1.47system 0:06.21elapsed 99%CPU (0avgtext+0avgdata 4696624maxresident)k
+~/Comp40/profiling/ppmtrans > /usr/bin/time ./ppmtrans -block-major -rotate 180 mobo > /dev/null
+4.84user 1.44system 0:06.30elapsed 99%CPU (0avgtext+0avgdata 4696192maxresident)k
+0inputs+0outputs (0major+586186minor)pagefaults 0swaps
+
+50ms fwc
+
+1.79x10^8

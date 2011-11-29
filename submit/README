@@ -1,0 +1,50 @@
+PROFILING ASSIGNMENT
+
+Rachel Lew
+
+COLLABORATION:
+    - Josh Pearl: discussing nature of profiling, kcachegrind usage, and
+      potential abstraction alteration strategies specifically in reference to
+      storing the length of segments as the initial element and true cost of
+      the execute_instruction function.
+
+PPMTRANS ASSEMBLY ANALYSIS:
+    The most expensive operation in ppmtrans is the UArray2b_at function. This
+    function is called when mapping over the original array as well as in
+    accessing the new element of the rotated image. Because it is the
+    foundation of the rotation program, it makes sense that the majority of
+    the time would be spent doing this operation.
+
+    After investigating the assembly code, it would appear that the
+    significant amount of dereferencing required in this function results in
+    copious memory access rather than use of registers. This is then repeated
+    once for each pixel in the new array. The use of this at function in this
+    way is unavoidable, and the memory access required as seen in the assembly
+    is unavoidable as well. We are loading values into the registers to access
+    the individual elements of the array, and there is no way to perform this
+    without loading values from memory.  While some of these values are
+    constants (blocksize, height, width), there is no way to remove these
+    dereferences without altering the interface (aka assigning them as local
+    variables in the calling function).
+
+UM ASSEMBLY ANALYSIS:
+    Most of the UM execution is spent in build_and_execute_um where the
+    instructions are fetched from memory and executed according to their 
+    corresponding opcode. Given that the main operation of the UM is being 
+    executed here, it makes sense that the majority of the time is spent in 
+    this function, and given the nature of these operations namely a large 
+    number of function calls the large amount of time this takes seems sound.
+
+    After investigation of the assemby code for this function, it would appear
+    that the assembly cannot be changed to further optimize the program.  The
+    majority of operations are done in registers with a large proportion of
+    them moving local variables into registers appropriate for calling the
+    various functions to execute UM instructions. There is one loop within the
+    function which retrieves each instruction and executes it, and no
+    computations could be removed from this loop to expedite the code.
+
+HOURS:
+    PROBLEM ANALYSIS: 7
+    PROBLEM SOLVING: 20
+
+

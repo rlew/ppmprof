@@ -55,8 +55,8 @@ void* UArray2_at(T twoDArray, int col, int row) {
     return &((unsigned char*)twoDArray->array)[loc*twoDArray->size]; 
 }
 
-void UArray2_map_row_major(T twoDArray, void apply(int col, int row, void* elem, 
-    void* cl), void* cl){
+void UArray2_map_row_major(T twoDArray, void apply(int col, int row, 
+    void* elem, void* cl), void* cl){
 	assert(twoDArray);
     for(int r=0; r < UArray2_height(twoDArray); r++) {
         for(int c=0; c < UArray2_width(twoDArray); c++) {
@@ -65,8 +65,8 @@ void UArray2_map_row_major(T twoDArray, void apply(int col, int row, void* elem,
     }
 }
 
-void UArray2_map_col_major(T twoDArray, void apply(int col, int row, void* elem, 
-    void* cl), void* cl) {
+void UArray2_map_col_major(T twoDArray, void apply(int col, int row, 
+    void* elem, void* cl), void* cl) {
 	assert(twoDArray);
     for(int c=0; c < UArray2_width(twoDArray); c++){
         for(int r=0; r < UArray2_height(twoDArray); r++){

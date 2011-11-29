@@ -34,7 +34,7 @@ void rotate90(int col, int row, A2 array2, A2Methods_Object* ptr,
         closure->rotatedImage, height - row - 1,
         col);
 
-    *(struct Pnm_rgb*)rotatedElem = *(struct Pnm_rgb*)ptr;
+    *rotatedElem = *(struct Pnm_rgb*)ptr;
 }
 
 void rotate180(int col, int row, A2 array2, A2Methods_Object* ptr, 
@@ -44,7 +44,7 @@ void rotate180(int col, int row, A2 array2, A2Methods_Object* ptr,
     struct Pnm_rgb* rotatedElem = methods->at(
         closure->rotatedImage, width - col - 1,
         height - row - 1);
-    *(struct Pnm_rgb*)rotatedElem = *(struct Pnm_rgb*)ptr;
+    *rotatedElem = *(struct Pnm_rgb*)ptr;
 }
 
 void rotate270(int col, int row, A2 array2, A2Methods_Object* ptr,
@@ -54,7 +54,7 @@ void rotate270(int col, int row, A2 array2, A2Methods_Object* ptr,
     struct Pnm_rgb* rotatedElem = methods->at(
         closure->rotatedImage, row, width - 
         col - 1);
-    *(struct Pnm_rgb*)rotatedElem = *(struct Pnm_rgb*)ptr;
+    *rotatedElem = *(struct Pnm_rgb*)ptr;
 }
 
 void flipHorizontal(int col, int row, A2 array2, A2Methods_Object* ptr,
@@ -64,7 +64,7 @@ void flipHorizontal(int col, int row, A2 array2, A2Methods_Object* ptr,
     struct Pnm_rgb* rotatedElem = methods->at(
         closure->rotatedImage, width - 
         col - 1, row);
-    *(struct Pnm_rgb*)rotatedElem = *(struct Pnm_rgb*)ptr;    
+    *rotatedElem = *(struct Pnm_rgb*)ptr;    
 }
 
 void flipVertical(int col, int row, A2 array2, A2Methods_Object* ptr,
@@ -74,7 +74,7 @@ void flipVertical(int col, int row, A2 array2, A2Methods_Object* ptr,
     struct Pnm_rgb* rotatedElem = methods->at(
         closure->rotatedImage, col, height -
         row - 1);
-    *(struct Pnm_rgb*)rotatedElem = *(struct Pnm_rgb*)ptr;
+    *rotatedElem = *(struct Pnm_rgb*)ptr;
 }
 
 void transposeImage(int col, int row, A2 array2, A2Methods_Object* ptr,
@@ -84,7 +84,7 @@ void transposeImage(int col, int row, A2 array2, A2Methods_Object* ptr,
     struct Pnm_rgb* rotatedElem = methods->at(
         closure->rotatedImage, width - col -1 ,
         height - row -1);
-    *(struct Pnm_rgb*)rotatedElem = *(struct Pnm_rgb*)ptr;
+    *rotatedElem = *(struct Pnm_rgb*)ptr;
 }
 
 int main(int argc, char *argv[]) {

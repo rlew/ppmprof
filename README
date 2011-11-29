@@ -9,7 +9,23 @@ COLLABORATION:
       the execute_instruction function.
 
 PPMTRANS ASSEMBLY ANALYSIS:
-    
+    The most expensive operation in ppmtrans is the UArray2b_at function. This
+    function is called when mapping over the original array as well as in
+    accessing the new element of the rotated image. Because it is the
+    foundation of the rotation program, it makes sense that the majority of
+    the time would be spent doing this operation.
+
+    After investigating the assembly code, it would appear that the
+    significant amount of dereferencing required in this function results in
+    copious memory access rather than use of registers. This is then repeated
+    once for each pixel in the new array. The use of this at function in this
+    way is unavoidable, and the memory access required as seen in the assembly
+    is unavoidable as well. We are loading values into the registers to access
+    the individual elements of the array, and there is no way to perform this
+    without loading values from memory.  While some of these values are
+    constants (blocksize, height, width), there is no way to remove these
+    dereferences without altering the interface (aka assigning them as local
+    variables in the calling function).
 
 UM ASSEMBLY ANALYSIS:
     Most of the UM execution is spent in build_and_execute_um where the
