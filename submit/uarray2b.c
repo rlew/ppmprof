@@ -9,7 +9,7 @@
 #define T UArray2b_T
 
 struct T { // represents a 2D array of cells each of size 'size'
-  int width, height, xblocks, yblocks;
+  int width, height;
   unsigned blocksize;
   unsigned size;
   void* blocks;
@@ -58,14 +58,8 @@ T UArray2b_new_64K_block(int width, int height, int size) {
 
 void *UArray2b_at(T array2b, int i, int j) {
   assert(i >= 0 && j >= 0);
-  int w = array2b->width;
-  int h = array2b->height;
-  assert(i < w && j < h); // avoid unused cells
   int b  = array2b->blocksize;
-  int bw = (w + b - 1) / b;
-  int bx = i / b;  // block x coordinate
-  int by = j / b;  // block y coordinate
-  int loc = (by * bw + bx)*(b*b) + (i % b) * b + j % b;
+  int loc = ((j / b)* ((array2b->width + b - 1) / b) + (i / b))*(b*b) + (i % b) * b + j % b;
   return &((unsigned char*)array2b->blocks)[loc * array2b->size];
 }
 void UArray2b_map(T array2b, 
@@ -81,17 +75,19 @@ void UArray2b_map(T array2b,
 
   for (int bx = 0; bx < bw; bx++) {
       for (int by = 0; by < bh; by++) {
+            int bi = bx * b;
           for(int i0 = 0; i0 < b; i0++) {
-              int bi = bx * b + i0;
+                int bj = by * b;
               for(int j0 = 0; j0 < b; j0++) {
-                  int bj = by * b + j0;
                   if(bi < w && bj < h){  
                       int loc = (by * bw + bx)*(b*b) + 
                                 (bi % b) * b + bj % b;
                       apply(bi, bj, array2b, &((unsigned
                       char*)blocks)[loc*size], cl);
                   }
+                  bj++;
               }
+              bi++;
            }
       }
    }
